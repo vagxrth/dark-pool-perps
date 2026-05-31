@@ -90,4 +90,27 @@ pub mod darkpool_perps {
     pub fn withdraw(ctx: Context<Withdraw>, amount: u64) -> Result<()> {
         instructions::withdraw_handler(ctx, amount)
     }
+
+    // ===================== Perps engine — trading (Phase 1) =====================
+
+    pub fn open_position(
+        ctx: Context<Trade>,
+        base_amount: u64,
+        is_long: bool,
+        limit_price: i128,
+    ) -> Result<()> {
+        instructions::open_position_handler(ctx, base_amount, is_long, limit_price)
+    }
+
+    pub fn close_position(ctx: Context<Trade>, limit_price: i128) -> Result<()> {
+        instructions::close_position_handler(ctx, limit_price)
+    }
+
+    pub fn settle_funding(ctx: Context<SettleFunding>) -> Result<()> {
+        instructions::settle_funding_handler(ctx)
+    }
+
+    pub fn liquidate(ctx: Context<Liquidate>) -> Result<()> {
+        instructions::liquidate_handler(ctx)
+    }
 }

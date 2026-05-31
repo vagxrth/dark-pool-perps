@@ -55,4 +55,19 @@ impl UserAccount {
             _ => false,
         }
     }
+
+    /// Settle accrued funding against collateral and snapshot the market's cumulative index.
+    /// Returns `None` on overflow. Longs pay when the index rises; shorts receive.
+    pub fn apply_funding(&mut self, market_cumulative_funding: i128) -> Option<()> {
+        if self.base_amount != 0 {
+            let payment = math::funding_payment(
+                self.base_amount,
+                market_cumulative_funding,
+                self.last_cumulative_funding,
+            )?;
+            self.collateral = self.collateral.checked_sub(payment)?;
+        }
+        self.last_cumulative_funding = market_cumulative_funding;
+        Some(())
+    }
 }

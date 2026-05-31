@@ -31,6 +31,8 @@ pub const DEFAULT_MAINTENANCE_MARGIN_BPS: i128 = 500;
 pub const DEFAULT_INITIAL_MARGIN_BPS: i128 = 1_000;
 /// Liquidation fee: 2.5% (250 bps) of notional, paid to liquidator/insurance.
 pub const DEFAULT_LIQUIDATION_FEE_BPS: i128 = 250;
+/// Funding accrues over this interval (1 hour, in seconds).
+pub const FUNDING_INTERVAL_SECS: i128 = 3_600;
 
 // ===================== Oracle guards =====================
 /// Max age (seconds) of an oracle price before it is considered stale.
