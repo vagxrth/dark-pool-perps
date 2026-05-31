@@ -15,7 +15,8 @@ working. Based on the verified Arcium 0.10.4 API (`arcis` 0.10.4 / `arcium-ancho
 - **`ConfidentialUser`** account (replaces the public fields of `UserAccount` for the private
   path): `authority`, `market`, **`enc_position`** = the `Enc<Mxe, Position>` ciphertext bytes
   (collateral + base + entry + nonce), `last_cumulative_funding`, `bump`.
-  `Position { collateral: i128 /*QUOTE 1e6*/, base: i128 /*BASE 1e9, signed*/, entry: i128 /*PRICE 1e6*/ }`.
+  `Position { collateral: i128 /*QUOTE 1e6*/, base: i128 /*BASE 1e9, signed*/, quote_entry: i128 /*cost basis = Σ base_delta·fill_price*/ }`.
+  (Cost-basis model, not weighted-avg price: MPC has no division by encrypted values, so we accumulate cost and keep all margin math multiply/add/compare.)
 - **Collateral backing:** real USDC stays in the existing pooled `Market.vault`; the *per-user
   amount* is confidential (lives inside `enc_position`). No dependency on C-SPL.
 - The public `Market` (vAMM reserves, funding, OI, oracle) is unchanged — only per-user state
@@ -25,8 +26,10 @@ working. Based on the verified Arcium 0.10.4 API (`arcis` 0.10.4 / `arcium-ancho
 - ✅ **`check_liquidation(position: Enc<Mxe,Position>, price: i64, maintenance_bps: i64) -> bool`**
   — margin check in MPC; price/maint are PUBLIC inputs; only the liquidatable bool is revealed.
   Division-free: `(collateral·1e9 + base·(price−entry))·1e4 < |base|·price·maint`. *Compiles.*
-- ⏳ **`update_position(position: Enc<Mxe,Position>, fill: Enc<Shared,Fill>) -> (Enc<Mxe,Position>, Enc<Shared,Receipt>)`**
-  — apply a fill to encrypted state, return new stored state + a client-decryptable receipt.
+- ✅ **`update_position(position: Enc<Mxe,Position>, fill: Enc<Shared,Fill>, price: i64, initial_bps: i64) -> (Enc<Mxe,Position>, bool)`**
+  — apply an encrypted fill to the stored position in MPC; returns the new encrypted state +
+  a revealed `meets_initial_margin` bool. Callback stores the new position only if margin is met
+  (rejects over-leverage), so the trade size/collateral stay hidden. *Compiles + builds.*
 - (Phase 3) **`match_batch([EncOrder;32]) -> [EncFill;32]`** — confidential batch auction.
 
 ## MPC flow (mirrors the validated `add_together` pattern)
