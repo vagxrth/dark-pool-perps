@@ -297,8 +297,10 @@ pub struct InitOrderPoolCallback<'info> {
     #[account(address = ::arcium_anchor::solana_instructions_sysvar::ID)]
     /// CHECK: instructions_sysvar, checked by the account constraint.
     pub instructions_sysvar: UncheckedAccount<'info>,
+    // Boxed: OrderPool carries 24x32B ciphertext (768B); keeping it on the
+    // stack pushed try_accounts past the 4096B BPF frame limit.
     #[account(mut)]
-    pub order_pool: Account<'info, OrderPool>,
+    pub order_pool: Box<Account<'info, OrderPool>>,
 }
 
 #[init_computation_definition_accounts("init_order_pool", payer)]
@@ -377,8 +379,10 @@ pub struct SubmitOrderCallback<'info> {
     #[account(address = ::arcium_anchor::solana_instructions_sysvar::ID)]
     /// CHECK: instructions_sysvar, checked by the account constraint.
     pub instructions_sysvar: UncheckedAccount<'info>,
+    // Boxed: OrderPool carries 24x32B ciphertext (768B); keeping it on the
+    // stack pushed try_accounts past the 4096B BPF frame limit.
     #[account(mut)]
-    pub order_pool: Account<'info, OrderPool>,
+    pub order_pool: Box<Account<'info, OrderPool>>,
 }
 
 #[init_computation_definition_accounts("submit_order", payer)]
