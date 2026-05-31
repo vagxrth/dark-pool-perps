@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Anton, JetBrains_Mono, Instrument_Serif, Archivo } from "next/font/google";
 import "./globals.css";
+import { Providers } from "./providers";
 
 const anton = Anton({
   weight: "400",
@@ -34,7 +35,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body
         className={`${anton.variable} ${archivo.variable} ${mono.variable} ${serif.variable}`}
       >
-        {children}
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

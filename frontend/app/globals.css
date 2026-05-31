@@ -556,6 +556,120 @@ button.ghost:hover { border-color: var(--phosphor); color: var(--phosphor); }
   line-height: 1.6;
 }
 
+/* ============================== live on devnet ============================== */
+.live {
+  border: 1px solid var(--line);
+  background: linear-gradient(180deg, #060c10, #04080a);
+  padding: 30px;
+}
+.live-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 24px;
+  flex-wrap: wrap;
+  margin-bottom: 28px;
+}
+.live-kicker {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  color: var(--phosphor);
+  margin-bottom: 16px;
+}
+.live-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--phosphor);
+  box-shadow: 0 0 12px var(--phosphor);
+  animation: pulse 2s ease-in-out infinite;
+}
+.live-dot.sm { width: 6px; height: 6px; }
+.live-title {
+  font-family: var(--font-display);
+  font-size: 34px;
+  letter-spacing: 0.01em;
+  margin-bottom: 12px;
+}
+.live-sub {
+  font-size: 14px;
+  color: var(--ink-dim);
+  max-width: 540px;
+  line-height: 1.6;
+}
+.live-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: var(--line-soft);
+  border: 1px solid var(--line-soft);
+}
+@media (max-width: 860px) { .live-grid { grid-template-columns: repeat(2, 1fr); } }
+.live-stat { background: var(--abyss-800); padding: 18px 20px; }
+.ls-label {
+  display: flex; align-items: center; gap: 7px;
+  font-family: var(--font-mono);
+  font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.ls-value {
+  font-family: var(--font-display);
+  font-size: 27px; margin-top: 8px; color: var(--ink);
+}
+.ls-value.cyan { color: var(--phosphor); }
+.ls-sub {
+  font-family: var(--font-mono);
+  font-size: 10px; color: var(--ink-faint); margin-top: 3px;
+}
+.live-actions {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  margin-top: 26px;
+}
+.link-out {
+  font-family: var(--font-mono);
+  font-size: 11px; letter-spacing: 0.08em;
+  color: var(--ink-dim); text-decoration: none;
+}
+.link-out:hover { color: var(--phosphor); }
+.live-status {
+  font-family: var(--font-mono);
+  font-size: 12px; color: var(--ink-dim);
+  margin-top: 20px; min-height: 16px; line-height: 1.6;
+}
+.live-status a { color: var(--phosphor); text-decoration: none; }
+.live-status a:hover { text-decoration: underline; }
+.live-err { color: var(--liquid-red); }
+
+/* re-skin the wallet-adapter button to match The Abyss */
+.wallet-adapter-button-trigger {
+  background: var(--phosphor) !important;
+  color: var(--abyss-900) !important;
+  font-family: var(--font-mono) !important;
+  font-size: 12px !important;
+  letter-spacing: 0.12em !important;
+  text-transform: uppercase !important;
+  border-radius: 0 !important;
+  height: auto !important;
+  padding: 14px 22px !important;
+  transition: transform 0.15s, box-shadow 0.25s !important;
+}
+.wallet-adapter-button-trigger:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 30px rgba(63, 242, 212, 0.3) !important;
+}
+.wallet-adapter-modal-wrapper {
+  background: var(--abyss-800) !important;
+  border: 1px solid var(--line) !important;
+  border-radius: 0 !important;
+  font-family: var(--font-ui) !important;
+}
+.wallet-adapter-modal-title { font-family: var(--font-display) !important; }
+.wallet-adapter-modal-list .wallet-adapter-button {
+  font-family: var(--font-mono) !important;
+}
+
 /* page-load stagger */
 .fade-up { opacity: 0; transform: translateY(20px); animation: fadeUp 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 @keyframes fadeUp { to { opacity: 1; transform: none; } }

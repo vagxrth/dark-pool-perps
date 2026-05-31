@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { LiveDevnet } from "./LiveDevnet";
 
 /* ----------------------------------------------------------------
    The trader's PLAINTEXT position (held client-side, never sent raw).
@@ -270,6 +271,10 @@ export default function Page() {
             </div>
           </div>
         </div>
+
+        {/* live on devnet */}
+        <div className="section-tag">Live on Solana devnet — the public engine</div>
+        <LiveDevnet />
 
         {/* how it works */}
         <div className="section-tag">How the dark pool works</div>

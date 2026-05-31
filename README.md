@@ -24,6 +24,20 @@ Built as a Solana India Fellowship capstone.
 - **Next.js frontend** — `frontend/`: an interactive "proof of confidentiality" UI that shows
   the on-chain `Enc<Mxe>` ciphertext beside the trader's decrypted view, with a live MPC
   liquidation verdict that flips as the oracle crosses the liquidation price. `cd frontend && npm i && npm run dev`.
+  It also has a **Live on Solana devnet** panel wired to the *deployed* program via Solana
+  wallet-adapter: connect Phantom/Solflare (set to **Devnet**), read the live oracle mark
+  price, and create your on-chain user account with a real signed `init_user` transaction.
+  (The confidential MPC panel stays a labeled visual demo — it needs a live Arcium cluster.)
+
+## Live on devnet
+
+| Account | Address |
+|---|---|
+| Program | `F1b3V2V3dg6YDsfPG6Rc9y769fN4uaZio96st5owXzAr` |
+| SOL-PERP market (index 0) | `8xZbR3KxHsVs2LFgSAsQ5DMPEzYbMGJjZ5enDB9TasL1` |
+| Admin oracle | `B6QJnZdBJx127gkDk45NDT1QQb85AMgQSvBXUNjFxyaC` |
+
+The market was created with `node --import tsx scripts/setup_devnet.mts` (one-time admin setup).
 
 ## Quickstart
 
