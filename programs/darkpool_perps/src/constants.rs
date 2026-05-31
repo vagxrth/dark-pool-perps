@@ -31,3 +31,15 @@ pub const DEFAULT_MAINTENANCE_MARGIN_BPS: i128 = 500;
 pub const DEFAULT_INITIAL_MARGIN_BPS: i128 = 1_000;
 /// Liquidation fee: 2.5% (250 bps) of notional, paid to liquidator/insurance.
 pub const DEFAULT_LIQUIDATION_FEE_BPS: i128 = 250;
+
+// ===================== Oracle guards =====================
+/// Max age (seconds) of an oracle price before it is considered stale.
+pub const MAX_ORACLE_STALENESS_SECS: i64 = 60;
+/// Max confidence interval as a fraction of price, in bps (e.g. 200 = 2%).
+pub const MAX_ORACLE_CONF_BPS: i128 = 200;
+
+// ===================== PDA seed prefixes =====================
+pub const MARKET_SEED: &[u8] = b"market";
+pub const USER_SEED: &[u8] = b"user";
+pub const VAULT_SEED: &[u8] = b"vault";
+pub const ADMIN_ORACLE_SEED: &[u8] = b"admin_oracle";

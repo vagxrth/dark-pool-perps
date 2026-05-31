@@ -129,6 +129,44 @@ pub fn vamm_mark_price(base_reserve: i128, quote_reserve: i128) -> Option<i128> 
     num.checked_div(den)
 }
 
+/// Execution price (PRICE_PRECISION) of a fill: `quote` (QUOTE_PRECISION) over
+/// `base_delta_abs` (BASE_PRECISION, positive). Assumes QUOTE_PRECISION == PRICE_PRECISION.
+pub fn exec_price(quote: i128, base_delta_abs: i128) -> Option<i128> {
+    if base_delta_abs <= 0 {
+        return None;
+    }
+    checked_mul_div(quote, BASE_PRECISION, base_delta_abs)
+}
+
+/// Volume-weighted average entry price when adding `add_base` @ `add_price` to a
+/// same-direction position `old_base` @ `old_entry`. Prices PRICE_PRECISION; base signed.
+pub fn weighted_entry(
+    old_base: i128,
+    old_entry: i128,
+    add_base: i128,
+    add_price: i128,
+) -> Option<i128> {
+    let total = old_base.checked_add(add_base)?;
+    if total == 0 {
+        return None;
+    }
+    let num = old_base
+        .checked_mul(old_entry)?
+        .checked_add(add_base.checked_mul(add_price)?)?;
+    num.checked_div(total)
+}
+
+/// Funding owed by a position since its last settlement. Positive => owed (collateral down).
+/// `cumulative_*` are quote-per-base (PRICE_PRECISION); `base_amount` is BASE_PRECISION.
+pub fn funding_payment(
+    base_amount: i128,
+    cumulative_now: i128,
+    cumulative_last: i128,
+) -> Option<i128> {
+    let delta = cumulative_now.checked_sub(cumulative_last)?;
+    checked_mul_div(base_amount, delta, BASE_PRECISION)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -259,5 +297,29 @@ mod tests {
     fn checked_mul_div_guards_zero_denominator() {
         assert_eq!(checked_mul_div(10, 10, 0), None);
         assert_eq!(checked_mul_div(10, 10, 5), Some(20));
+    }
+
+    #[test]
+    fn exec_price_from_fill() {
+        // $1500 over 10 SOL -> $150
+        assert_eq!(exec_price(quote(1500), sol(10)), Some(usd(150)));
+        assert_eq!(exec_price(quote(1500), 0), None);
+    }
+
+    #[test]
+    fn weighted_entry_averages() {
+        // 1 SOL @ $100 then +1 SOL @ $200 -> $150 avg
+        assert_eq!(
+            weighted_entry(sol(1), usd(100), sol(1), usd(200)),
+            Some(usd(150))
+        );
+    }
+
+    #[test]
+    fn funding_payment_signs() {
+        // long 2 SOL, cumulative rose by $1/base -> owes $2
+        assert_eq!(funding_payment(sol(2), PRICE_PRECISION, 0), Some(quote(2)));
+        // short 2 SOL -> receives $2 (negative owed)
+        assert_eq!(funding_payment(-sol(2), PRICE_PRECISION, 0), Some(-quote(2)));
     }
 }
