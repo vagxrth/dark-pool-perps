@@ -21,6 +21,9 @@ Built as a Solana India Fellowship capstone.
   branchless uniform-price batch auction (`match_batch`) routing net flow to the vAMM.
 - **TypeScript SDK + demo** — `app/sdk.ts` (`DarkpoolClient`) and a proof-of-confidentiality
   demo (`app/demo.ts`).
+- **Next.js frontend** — `frontend/`: an interactive "proof of confidentiality" UI that shows
+  the on-chain `Enc<Mxe>` ciphertext beside the trader's decrypted view, with a live MPC
+  liquidation verdict that flips as the oracle crosses the liquidation price. `cd frontend && npm i && npm run dev`.
 
 ## Quickstart
 
