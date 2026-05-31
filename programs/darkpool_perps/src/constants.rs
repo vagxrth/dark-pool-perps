@@ -5,6 +5,8 @@ use arcium_anchor::comp_def_offset;
 pub const SEED: &str = "arcium";
 
 pub const COMP_DEF_OFFSET_ADD_TOGETHER: u32 = comp_def_offset("add_together");
+pub const COMP_DEF_OFFSET_INIT_POSITION: u32 = comp_def_offset("init_position");
+pub const COMP_DEF_OFFSET_CHECK_LIQUIDATION: u32 = comp_def_offset("check_liquidation");
 
 // ===================== Perps fixed-point precision =====================
 // All on-chain perps math uses i128 integer fixed-point with these scales.
@@ -45,3 +47,4 @@ pub const MARKET_SEED: &[u8] = b"market";
 pub const USER_SEED: &[u8] = b"user";
 pub const VAULT_SEED: &[u8] = b"vault";
 pub const ADMIN_ORACLE_SEED: &[u8] = b"admin_oracle";
+pub const CONF_USER_SEED: &[u8] = b"conf_user";

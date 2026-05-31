@@ -113,4 +113,57 @@ pub mod darkpool_perps {
     pub fn liquidate(ctx: Context<Liquidate>) -> Result<()> {
         instructions::liquidate_handler(ctx)
     }
+
+    // ===================== Confidential layer (Phase 2) =====================
+
+    pub fn init_position_comp_def(ctx: Context<InitPositionCompDef>) -> Result<()> {
+        instructions::init_position_comp_def_handler(ctx)
+    }
+
+    pub fn init_position(
+        ctx: Context<InitPosition>,
+        computation_offset: u64,
+        ct_collateral: [u8; 32],
+        ct_base: [u8; 32],
+        ct_entry: [u8; 32],
+        pub_key: [u8; 32],
+        nonce: u128,
+    ) -> Result<()> {
+        instructions::init_position_handler(
+            ctx,
+            computation_offset,
+            ct_collateral,
+            ct_base,
+            ct_entry,
+            pub_key,
+            nonce,
+        )
+    }
+
+    #[arcium_callback(encrypted_ix = "init_position")]
+    pub fn init_position_callback(
+        ctx: Context<InitPositionCallback>,
+        output: SignedComputationOutputs<InitPositionOutput>,
+    ) -> Result<()> {
+        instructions::init_position_callback_handler(ctx, output)
+    }
+
+    pub fn check_liquidation_comp_def(ctx: Context<CheckLiquidationCompDef>) -> Result<()> {
+        instructions::check_liquidation_comp_def_handler(ctx)
+    }
+
+    pub fn check_liquidation(
+        ctx: Context<CheckLiquidation>,
+        computation_offset: u64,
+    ) -> Result<()> {
+        instructions::check_liquidation_handler(ctx, computation_offset)
+    }
+
+    #[arcium_callback(encrypted_ix = "check_liquidation")]
+    pub fn check_liquidation_callback(
+        ctx: Context<CheckLiquidationCallback>,
+        output: SignedComputationOutputs<CheckLiquidationOutput>,
+    ) -> Result<()> {
+        instructions::check_liquidation_callback_handler(ctx, output)
+    }
 }

@@ -26,6 +26,15 @@ mod circuits {
         entry: i128,
     }
 
+    /// Store a client-supplied position as MXE-encrypted state on-chain. The client encrypts
+    /// the Position to the cluster (Enc<Shared>), the circuit re-encrypts it to the MXE
+    /// (Enc<Mxe>) so it persists and can be re-fed into future computations.
+    #[instruction]
+    pub fn init_position(pos_ctxt: Enc<Shared, Position>) -> Enc<Mxe, Position> {
+        let pos = pos_ctxt.to_arcis();
+        Mxe::get().from_arcis(pos)
+    }
+
     /// Confidential margin/liquidation check. The position is encrypted (only the MXE can
     /// read it); the oracle price and maintenance ratio are PUBLIC inputs. Only the boolean
     /// "is this account liquidatable?" is revealed — sizes, collateral, and PnL stay hidden.
