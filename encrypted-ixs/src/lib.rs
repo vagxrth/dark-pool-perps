@@ -134,4 +134,41 @@ mod circuits {
         let net = buy_vol - sell_vol;
         (matched.reveal(), net.reveal())
     }
+
+    /// Create an empty encrypted order book (all padding slots, size 0).
+    #[instruction]
+    pub fn init_order_pool() -> Enc<Mxe, [Order; 8]> {
+        // Built explicitly (Arcis structs aren't Copy, so `[x; 8]` isn't available).
+        let book = [
+            Order { is_buy: false, price: 0, size: 0 },
+            Order { is_buy: false, price: 0, size: 0 },
+            Order { is_buy: false, price: 0, size: 0 },
+            Order { is_buy: false, price: 0, size: 0 },
+            Order { is_buy: false, price: 0, size: 0 },
+            Order { is_buy: false, price: 0, size: 0 },
+            Order { is_buy: false, price: 0, size: 0 },
+            Order { is_buy: false, price: 0, size: 0 },
+        ];
+        Mxe::get().from_arcis(book)
+    }
+
+    /// Insert a client-submitted encrypted order into slot `slot` of the encrypted book,
+    /// branchlessly (every slot is touched; only `i == slot` takes the new order). Returns the
+    /// updated MXE-encrypted book. `slot` is a public index.
+    #[instruction]
+    pub fn submit_order(
+        pool_ctxt: Enc<Mxe, [Order; 8]>,
+        order_ctxt: Enc<Shared, Order>,
+        slot: u64,
+    ) -> Enc<Mxe, [Order; 8]> {
+        let mut book = pool_ctxt.to_arcis();
+        let o = order_ctxt.to_arcis();
+        for i in 0..8 {
+            let pick = (i as u64) == slot;
+            book[i].is_buy = if pick { o.is_buy } else { book[i].is_buy };
+            book[i].price = if pick { o.price } else { book[i].price };
+            book[i].size = if pick { o.size } else { book[i].size };
+        }
+        pool_ctxt.owner.from_arcis(book)
+    }
 }

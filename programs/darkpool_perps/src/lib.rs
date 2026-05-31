@@ -196,4 +196,70 @@ pub mod darkpool_perps {
     ) -> Result<()> {
         instructions::update_position_callback_handler(ctx, output)
     }
+
+    // ===================== Confidential dark-pool matching (Phase 3) =====================
+
+    pub fn init_order_pool_comp_def(ctx: Context<InitOrderPoolCompDef>) -> Result<()> {
+        instructions::init_order_pool_comp_def_handler(ctx)
+    }
+
+    pub fn init_order_pool(ctx: Context<InitOrderPool>, computation_offset: u64) -> Result<()> {
+        instructions::init_order_pool_handler(ctx, computation_offset)
+    }
+
+    #[arcium_callback(encrypted_ix = "init_order_pool")]
+    pub fn init_order_pool_callback(
+        ctx: Context<InitOrderPoolCallback>,
+        output: SignedComputationOutputs<InitOrderPoolOutput>,
+    ) -> Result<()> {
+        instructions::init_order_pool_callback_handler(ctx, output)
+    }
+
+    pub fn submit_order_comp_def(ctx: Context<SubmitOrderCompDef>) -> Result<()> {
+        instructions::submit_order_comp_def_handler(ctx)
+    }
+
+    pub fn submit_order(
+        ctx: Context<SubmitOrder>,
+        computation_offset: u64,
+        ct_is_buy: [u8; 32],
+        ct_price: [u8; 32],
+        ct_size: [u8; 32],
+        pub_key: [u8; 32],
+        order_nonce: u128,
+    ) -> Result<()> {
+        instructions::submit_order_handler(
+            ctx,
+            computation_offset,
+            ct_is_buy,
+            ct_price,
+            ct_size,
+            pub_key,
+            order_nonce,
+        )
+    }
+
+    #[arcium_callback(encrypted_ix = "submit_order")]
+    pub fn submit_order_callback(
+        ctx: Context<SubmitOrderCallback>,
+        output: SignedComputationOutputs<SubmitOrderOutput>,
+    ) -> Result<()> {
+        instructions::submit_order_callback_handler(ctx, output)
+    }
+
+    pub fn match_batch_comp_def(ctx: Context<MatchBatchCompDef>) -> Result<()> {
+        instructions::match_batch_comp_def_handler(ctx)
+    }
+
+    pub fn crank_match(ctx: Context<MatchBatch>, computation_offset: u64) -> Result<()> {
+        instructions::crank_match_handler(ctx, computation_offset)
+    }
+
+    #[arcium_callback(encrypted_ix = "match_batch")]
+    pub fn match_batch_callback(
+        ctx: Context<MatchBatchCallback>,
+        output: SignedComputationOutputs<MatchBatchOutput>,
+    ) -> Result<()> {
+        instructions::crank_match_callback_handler(ctx, output)
+    }
 }

@@ -8,6 +8,9 @@ pub const COMP_DEF_OFFSET_ADD_TOGETHER: u32 = comp_def_offset("add_together");
 pub const COMP_DEF_OFFSET_INIT_POSITION: u32 = comp_def_offset("init_position");
 pub const COMP_DEF_OFFSET_UPDATE_POSITION: u32 = comp_def_offset("update_position");
 pub const COMP_DEF_OFFSET_CHECK_LIQUIDATION: u32 = comp_def_offset("check_liquidation");
+pub const COMP_DEF_OFFSET_INIT_ORDER_POOL: u32 = comp_def_offset("init_order_pool");
+pub const COMP_DEF_OFFSET_SUBMIT_ORDER: u32 = comp_def_offset("submit_order");
+pub const COMP_DEF_OFFSET_MATCH_BATCH: u32 = comp_def_offset("match_batch");
 
 // ===================== Perps fixed-point precision =====================
 // All on-chain perps math uses i128 integer fixed-point with these scales.
@@ -49,3 +52,4 @@ pub const USER_SEED: &[u8] = b"user";
 pub const VAULT_SEED: &[u8] = b"vault";
 pub const ADMIN_ORACLE_SEED: &[u8] = b"admin_oracle";
 pub const CONF_USER_SEED: &[u8] = b"conf_user";
+pub const ORDER_POOL_SEED: &[u8] = b"order_pool";

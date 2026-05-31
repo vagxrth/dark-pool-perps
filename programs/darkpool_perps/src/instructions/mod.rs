@@ -4,6 +4,7 @@ pub mod collateral;
 pub mod confidential;
 pub mod funding;
 pub mod liquidate;
+pub mod matching;
 pub mod trade;
 pub mod user_accounts;
 
@@ -13,5 +14,6 @@ pub use collateral::*;
 pub use confidential::*;
 pub use funding::*;
 pub use liquidate::*;
+pub use matching::*;
 pub use trade::*;
 pub use user_accounts::*;

@@ -21,3 +21,19 @@ pub struct ConfidentialUser {
     /// True once the encrypted position has been stored by the init_position callback.
     pub initialized: bool,
 }
+
+/// Confidential dark-pool order book: the on-chain ciphertext of `Enc<Mxe, [Order; 8]>`
+/// (8 orders × 3 fields = 24 ciphertexts). `bump` first so the ciphertext array is at offset
+/// 9 for `ArgBuilder.account(pubkey, 9, 32*24)` feed-in.
+#[account]
+#[derive(InitSpace)]
+pub struct OrderPool {
+    pub bump: u8,
+    /// Enc<Mxe, [Order; 8]> ciphertexts (order-major: [is_buy, price, size] × 8).
+    pub enc_orders: [[u8; 32]; 24],
+    pub nonce: u128,
+    pub market: Pubkey,
+    /// Next free slot to write (0..8); wraps for the demo.
+    pub next_slot: u8,
+    pub initialized: bool,
+}
