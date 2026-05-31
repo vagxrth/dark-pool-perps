@@ -80,6 +80,7 @@ describe("Confidential perps (Phase 2)", () => {
   it("hides a position and decides liquidation in MPC", async () => {
     // ---- comp def setup + circuit upload ----
     await initCompDef("init_position", () => program.methods.initPositionCompDef());
+    await initCompDef("update_position", () => program.methods.updatePositionCompDef());
     await initCompDef("check_liquidation", () => program.methods.checkLiquidationCompDef());
 
     // ---- market + admin oracle @ $150 ----
@@ -87,7 +88,7 @@ describe("Confidential perps (Phase 2)", () => {
 
     await program.methods
       .initAdminOracle(new anchor.BN((150n * PRICE).toString()), new anchor.BN(0))
-      .accounts({ authority: owner.publicKey, adminOracle: adminOraclePda })
+      .accountsPartial({ authority: owner.publicKey, adminOracle: adminOraclePda })
       .rpc({ commitment: "confirmed" });
 
     await program.methods
@@ -101,7 +102,7 @@ describe("Confidential perps (Phase 2)", () => {
         1000, // initial bps
         250 // liquidation fee bps
       )
-      .accounts({
+      .accountsPartial({
         authority: owner.publicKey,
         market: marketPda,
         collateralMint: mint,
@@ -109,29 +110,26 @@ describe("Confidential perps (Phase 2)", () => {
       })
       .rpc({ commitment: "confirmed" });
 
-    // ---- encrypt a leveraged long: $80 collateral, 5 SOL @ $150 (~9.4x) ----
+    // ---- client encryption setup ----
     const mxePublicKey = await getMXEPublicKeyWithRetry(provider, program.programId);
     const priv = x25519.utils.randomSecretKey();
     const pub = x25519.getPublicKey(priv);
     const shared = x25519.getSharedSecret(priv, mxePublicKey);
     const cipher = new RescueCipher(shared);
 
-    const collateral = 80n * QUOTE;
-    const base = 5n * BASE;
-    const entry = 150n * PRICE;
-    const nonce = randomBytes(16);
-    const ct = cipher.encrypt([collateral, base, entry], nonce);
-
-    // ---- init_position (store Enc<Mxe, Position>) ----
+    // ---- init_position: store a FLAT position ($80 collateral, no exposure) ----
+    // Position fields = [collateral (QUOTE), base (BASE, signed), quote_entry (cost basis)].
+    const posNonce = randomBytes(16);
+    const posCt = cipher.encrypt([80n * QUOTE, 0n, 0n], posNonce);
     await queueAndFinalize((computationOffset) =>
       program.methods
         .initPosition(
           computationOffset,
-          Array.from(ct[0]),
-          Array.from(ct[1]),
-          Array.from(ct[2]),
+          Array.from(posCt[0]),
+          Array.from(posCt[1]),
+          Array.from(posCt[2]),
           Array.from(pub),
-          new anchor.BN(deserializeLE(nonce).toString())
+          new anchor.BN(deserializeLE(posNonce).toString())
         )
         .accountsPartial({
           payer: owner.publicKey,
@@ -140,10 +138,32 @@ describe("Confidential perps (Phase 2)", () => {
           confUser: confUserPda,
         })
     );
-
     let cu = await program.account.confidentialUser.fetch(confUserPda);
     expect(cu.initialized).to.equal(true);
-    console.log("  position stored as ciphertext (enc_position[0..8]):", cu.encPosition[0].slice(0, 8));
+
+    // ---- confidential trade: open 5 SOL long @ $150 via update_position (margin-gated in MPC) ----
+    // Fill fields = [base_delta (BASE, signed), fill_price (PRICE)]. ~9.4x leverage; meets 10% initial.
+    const fillNonce = randomBytes(16);
+    const fillCt = cipher.encrypt([5n * BASE, 150n * PRICE], fillNonce);
+    await queueAndFinalize((computationOffset) =>
+      program.methods
+        .updatePosition(
+          computationOffset,
+          Array.from(fillCt[0]),
+          Array.from(fillCt[1]),
+          Array.from(pub),
+          new anchor.BN(deserializeLE(fillNonce).toString())
+        )
+        .accountsPartial({
+          payer: owner.publicKey,
+          ...arciumAccounts(computationOffset, "update_position"),
+          market: marketPda,
+          oracle: adminOraclePda,
+          confUser: confUserPda,
+        })
+    );
+    cu = await program.account.confidentialUser.fetch(confUserPda);
+    console.log("  confidential 5-SOL long applied; on-chain is ciphertext:", cu.encPosition[0].slice(0, 8));
 
     // ---- check_liquidation at $150 → NOT liquidatable ----
     await queueAndFinalize((computationOffset) =>
@@ -162,7 +182,7 @@ describe("Confidential perps (Phase 2)", () => {
     // ---- crash the oracle to $124, re-check → LIQUIDATABLE ----
     await program.methods
       .pushAdminPrice(new anchor.BN((124n * PRICE).toString()), new anchor.BN(0))
-      .accounts({ authority: owner.publicKey, adminOracle: adminOraclePda })
+      .accountsPartial({ authority: owner.publicKey, adminOracle: adminOraclePda })
       .rpc({ commitment: "confirmed" });
 
     await queueAndFinalize((computationOffset) =>

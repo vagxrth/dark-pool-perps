@@ -166,4 +166,34 @@ pub mod darkpool_perps {
     ) -> Result<()> {
         instructions::check_liquidation_callback_handler(ctx, output)
     }
+
+    pub fn update_position_comp_def(ctx: Context<UpdatePositionCompDef>) -> Result<()> {
+        instructions::update_position_comp_def_handler(ctx)
+    }
+
+    pub fn update_position(
+        ctx: Context<UpdatePosition>,
+        computation_offset: u64,
+        ct_base_delta: [u8; 32],
+        ct_fill_price: [u8; 32],
+        pub_key: [u8; 32],
+        fill_nonce: u128,
+    ) -> Result<()> {
+        instructions::update_position_handler(
+            ctx,
+            computation_offset,
+            ct_base_delta,
+            ct_fill_price,
+            pub_key,
+            fill_nonce,
+        )
+    }
+
+    #[arcium_callback(encrypted_ix = "update_position")]
+    pub fn update_position_callback(
+        ctx: Context<UpdatePositionCallback>,
+        output: SignedComputationOutputs<UpdatePositionOutput>,
+    ) -> Result<()> {
+        instructions::update_position_callback_handler(ctx, output)
+    }
 }

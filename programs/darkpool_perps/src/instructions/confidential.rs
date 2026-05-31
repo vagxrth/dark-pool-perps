@@ -18,6 +18,11 @@ pub struct LiquidationCheckEvent {
     pub liquidatable: bool,
 }
 
+#[event]
+pub struct PositionUpdatedEvent {
+    pub user: Pubkey,
+}
+
 // =========================================================================================
 // init_position : store a client-supplied Enc<Shared, Position> as Enc<Mxe, Position> on-chain
 // =========================================================================================
@@ -167,6 +172,95 @@ pub fn check_liquidation_callback_handler(
         user: ctx.accounts.conf_user.key(),
         liquidatable,
     });
+    Ok(())
+}
+
+// =========================================================================================
+// update_position : apply an encrypted fill to the stored Enc<Mxe, Position> (margin-gated)
+// =========================================================================================
+
+pub fn update_position_comp_def_handler(ctx: Context<UpdatePositionCompDef>) -> Result<()> {
+    init_computation_def(ctx.accounts, None)?;
+    Ok(())
+}
+
+pub fn update_position_handler(
+    ctx: Context<UpdatePosition>,
+    computation_offset: u64,
+    ct_base_delta: [u8; 32],
+    ct_fill_price: [u8; 32],
+    pub_key: [u8; 32],
+    fill_nonce: u128,
+) -> Result<()> {
+    require!(ctx.accounts.conf_user.initialized, ErrorCode::NoPosition);
+    require_keys_eq!(
+        ctx.accounts.oracle.key(),
+        ctx.accounts.market.oracle,
+        ErrorCode::InvalidOracle
+    );
+    let now = Clock::get()?.unix_timestamp;
+    let px = load_oracle_price(
+        &ctx.accounts.oracle.to_account_info(),
+        ctx.accounts.market.oracle_source,
+        now,
+        ctx.program_id,
+    )?;
+    let price_i64 = i64::try_from(px.price).map_err(|_| ErrorCode::MathOverflow)?;
+    let initial_bps = ctx.accounts.market.initial_margin_bps as i64;
+
+    ctx.accounts.sign_pda_account.bump = ctx.bumps.sign_pda_account;
+    let stored_nonce = ctx.accounts.conf_user.nonce;
+    let conf_user_key = ctx.accounts.conf_user.key();
+
+    // update_position(pos: Enc<Mxe,Position>, fill: Enc<Shared,Fill>, price: i64, initial_bps: i64)
+    let args = ArgBuilder::new()
+        .plaintext_u128(stored_nonce)
+        .account(conf_user_key, 8 + 1, 32 * 3)
+        .x25519_pubkey(pub_key)
+        .plaintext_u128(fill_nonce)
+        .encrypted_i128(ct_base_delta)
+        .encrypted_i128(ct_fill_price)
+        .plaintext_i64(price_i64)
+        .plaintext_i64(initial_bps)
+        .build();
+
+    queue_computation(
+        ctx.accounts,
+        computation_offset,
+        args,
+        vec![UpdatePositionCallback::callback_ix(
+            computation_offset,
+            &ctx.accounts.mxe_account,
+            &[CallbackAccount {
+                pubkey: conf_user_key,
+                is_writable: true,
+            }],
+        )?],
+        1,
+        0,
+    )?;
+    Ok(())
+}
+
+pub fn update_position_callback_handler(
+    ctx: Context<UpdatePositionCallback>,
+    output: SignedComputationOutputs<UpdatePositionOutput>,
+) -> Result<()> {
+    // A tuple return is wrapped: field_0 is a struct holding field_0 (the Enc<Mxe> output,
+    // an MXEEncryptedStruct with .ciphertexts/.nonce) and field_1 (the revealed bool).
+    let (new_pos, meets) = match output.verify_output(
+        &ctx.accounts.cluster_account,
+        &ctx.accounts.computation_account,
+    ) {
+        Ok(UpdatePositionOutput { field_0 }) => (field_0.field_0, field_0.field_1),
+        Err(_) => return Err(ErrorCode::AbortedComputation.into()),
+    };
+    // Reject the (already-computed) new position if it breaches initial margin.
+    require!(meets, ErrorCode::InsufficientMargin);
+    let cu = &mut ctx.accounts.conf_user;
+    cu.enc_position = new_pos.ciphertexts;
+    cu.nonce = new_pos.nonce;
+    emit!(PositionUpdatedEvent { user: cu.key() });
     Ok(())
 }
 
@@ -327,6 +421,89 @@ pub struct CheckLiquidationCallback<'info> {
 #[init_computation_definition_accounts("check_liquidation", payer)]
 #[derive(Accounts)]
 pub struct CheckLiquidationCompDef<'info> {
+    #[account(mut)]
+    pub payer: Signer<'info>,
+    #[account(mut, address = derive_mxe_pda!())]
+    pub mxe_account: Box<Account<'info, MXEAccount>>,
+    #[account(mut)]
+    /// CHECK: comp_def_account, checked by arcium program.
+    pub comp_def_account: UncheckedAccount<'info>,
+    #[account(mut, address = derive_mxe_lut_pda!(mxe_account.lut_offset_slot))]
+    /// CHECK: address_lookup_table, checked by arcium program.
+    pub address_lookup_table: UncheckedAccount<'info>,
+    #[account(address = LUT_PROGRAM_ID)]
+    /// CHECK: lut_program is the Address Lookup Table program.
+    pub lut_program: UncheckedAccount<'info>,
+    pub arcium_program: Program<'info, Arcium>,
+    pub system_program: Program<'info, System>,
+}
+
+#[queue_computation_accounts("update_position", payer)]
+#[derive(Accounts)]
+#[instruction(computation_offset: u64)]
+pub struct UpdatePosition<'info> {
+    #[account(mut)]
+    pub payer: Signer<'info>,
+    #[account(
+        init_if_needed,
+        space = 9,
+        payer = payer,
+        seeds = [&SIGN_PDA_SEED],
+        bump,
+        address = derive_sign_pda!(),
+    )]
+    pub sign_pda_account: Account<'info, ArciumSignerAccount>,
+    #[account(address = derive_mxe_pda!())]
+    pub mxe_account: Box<Account<'info, MXEAccount>>,
+    #[account(mut, address = derive_mempool_pda!(mxe_account))]
+    /// CHECK: mempool_account, checked by the arcium program.
+    pub mempool_account: UncheckedAccount<'info>,
+    #[account(mut, address = derive_execpool_pda!(mxe_account))]
+    /// CHECK: executing_pool, checked by the arcium program.
+    pub executing_pool: UncheckedAccount<'info>,
+    #[account(mut, address = derive_comp_pda!(computation_offset, mxe_account))]
+    /// CHECK: computation_account, checked by the arcium program.
+    pub computation_account: UncheckedAccount<'info>,
+    #[account(address = derive_comp_def_pda!(COMP_DEF_OFFSET_UPDATE_POSITION))]
+    pub comp_def_account: Box<Account<'info, ComputationDefinitionAccount>>,
+    #[account(mut, address = derive_cluster_pda!(mxe_account))]
+    pub cluster_account: Box<Account<'info, Cluster>>,
+    #[account(mut, address = ARCIUM_FEE_POOL_ACCOUNT_ADDRESS)]
+    pub pool_account: Account<'info, FeePool>,
+    #[account(mut, address = ARCIUM_CLOCK_ACCOUNT_ADDRESS)]
+    pub clock_account: Account<'info, ClockAccount>,
+    pub system_program: Program<'info, System>,
+    pub arcium_program: Program<'info, Arcium>,
+    // ---- custom ----
+    pub market: Box<Account<'info, Market>>,
+    /// CHECK: verified against market.oracle in the handler.
+    pub oracle: UncheckedAccount<'info>,
+    #[account(mut, has_one = market @ ErrorCode::Unauthorized)]
+    pub conf_user: Box<Account<'info, ConfidentialUser>>,
+}
+
+#[callback_accounts("update_position")]
+#[derive(Accounts)]
+pub struct UpdatePositionCallback<'info> {
+    pub arcium_program: Program<'info, Arcium>,
+    #[account(address = derive_comp_def_pda!(COMP_DEF_OFFSET_UPDATE_POSITION))]
+    pub comp_def_account: Account<'info, ComputationDefinitionAccount>,
+    #[account(address = derive_mxe_pda!())]
+    pub mxe_account: Account<'info, MXEAccount>,
+    /// CHECK: computation_account, checked by arcium program via the callback context.
+    pub computation_account: UncheckedAccount<'info>,
+    #[account(address = derive_cluster_pda!(mxe_account))]
+    pub cluster_account: Account<'info, Cluster>,
+    #[account(address = ::arcium_anchor::solana_instructions_sysvar::ID)]
+    /// CHECK: instructions_sysvar, checked by the account constraint.
+    pub instructions_sysvar: UncheckedAccount<'info>,
+    #[account(mut)]
+    pub conf_user: Account<'info, ConfidentialUser>,
+}
+
+#[init_computation_definition_accounts("update_position", payer)]
+#[derive(Accounts)]
+pub struct UpdatePositionCompDef<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
     #[account(mut, address = derive_mxe_pda!())]

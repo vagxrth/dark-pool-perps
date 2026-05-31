@@ -6,6 +6,7 @@ pub const SEED: &str = "arcium";
 
 pub const COMP_DEF_OFFSET_ADD_TOGETHER: u32 = comp_def_offset("add_together");
 pub const COMP_DEF_OFFSET_INIT_POSITION: u32 = comp_def_offset("init_position");
+pub const COMP_DEF_OFFSET_UPDATE_POSITION: u32 = comp_def_offset("update_position");
 pub const COMP_DEF_OFFSET_CHECK_LIQUIDATION: u32 = comp_def_offset("check_liquidation");
 
 // ===================== Perps fixed-point precision =====================
