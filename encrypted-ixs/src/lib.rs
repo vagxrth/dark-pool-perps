@@ -95,4 +95,43 @@ mod circuits {
         let notional_scaled = base_abs * price;
         (av_scaled * 10_000 < notional_scaled * (maintenance_bps as i128)).reveal()
     }
+
+    // ===================== Confidential dark-pool matching (Phase 3) =====================
+    // A single confidential order. `is_buy` = side, `price` = limit (PRICE_PRECISION),
+    // `size` = quantity (BASE_PRECISION, always positive). Padding slots use size = 0.
+    pub struct Order {
+        is_buy: bool,
+        price: i128,
+        size: i128,
+    }
+
+    /// Confidential batch-auction clearing over an encrypted order book.
+    ///
+    /// The whole book is encrypted to the MXE; `ref_price` (the public vAMM mark / oracle) is
+    /// the clearing price. The MPC sums the size of every order that *crosses* `ref_price`
+    /// (buys with limit ≥ price, sells with limit ≤ price), nets the two sides, and reveals
+    /// ONLY two aggregates:
+    ///   - `matched`: peer-to-peer volume crossed at `ref_price` (= min(buy, sell))
+    ///   - `net`:     signed residual (buy − sell) the public vAMM absorbs (+ = vAMM sells)
+    /// Every individual order's side, price, and size stays hidden — the dark pool.
+    ///
+    /// Fixed-shape (book of 8, zero-padded) and branchless to satisfy Arcis.
+    #[instruction]
+    pub fn match_batch(book_ctxt: Enc<Mxe, [Order; 8]>, ref_price: i64) -> (i128, i128) {
+        let book = book_ctxt.to_arcis();
+        let p = ref_price as i128;
+
+        let mut buy_vol: i128 = 0;
+        let mut sell_vol: i128 = 0;
+        for i in 0..8 {
+            let crosses_buy = book[i].is_buy & (book[i].price >= p);
+            let crosses_sell = (!book[i].is_buy) & (book[i].price <= p);
+            buy_vol += if crosses_buy { book[i].size } else { 0 };
+            sell_vol += if crosses_sell { book[i].size } else { 0 };
+        }
+
+        let matched = if buy_vol < sell_vol { buy_vol } else { sell_vol };
+        let net = buy_vol - sell_vol;
+        (matched.reveal(), net.reveal())
+    }
 }
