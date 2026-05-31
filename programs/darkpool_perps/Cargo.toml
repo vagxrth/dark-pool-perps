@@ -1,0 +1,39 @@
+[package]
+name = "darkpool_perps"
+version = "0.1.0"
+description = "Created with Arcium & Anchor"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "darkpool_perps"
+
+[features]
+default = []
+cpi = ["no-entrypoint"]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+idl-build = ["anchor-lang/idl-build", "arcium-anchor/idl-build"]
+anchor-debug = []
+custom-heap = []
+custom-panic = []
+
+[dependencies]
+anchor-lang = { version = "1.0.2", features = ["init-if-needed"] }
+arcium-client = { default-features = false, version = "=0.10.4" }
+arcium-macros = "=0.10.4"
+arcium-anchor = "=0.10.4"
+# NOTE (Phase 0 spike, 2026-05-31): `pyth-solana-receiver-sdk` 1.2.0 is INCOMPATIBLE here —
+# it pins anchor-lang 0.32.1, which clashes with our anchor-lang 1.0.2 + Solana 3.x split
+# crates (E0277 on PriceUpdateV2's #[account] macro). Until Pyth ships an anchor-1.0 build,
+# Phase 1 reads the Pyth PriceUpdateV2 account by MANUAL borsh deserialization (owner-checked),
+# with an admin-pushed oracle account as a dev stand-in. Do NOT re-add this crate naively.
+# pin so that we do not have 1.13.*
+unicode-segmentation = { version = "=1.12.0"}
+# pin so that we do not have edition = 2024
+hashbrown = { version = "=0.16.1"}
+indexmap = { version = "=2.13.1"}
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(target_os, values("solana"))'] }
